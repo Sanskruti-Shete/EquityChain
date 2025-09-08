@@ -1,12 +1,98 @@
 import React from 'react';
 import { Clock, Users, TrendingUp, ExternalLink } from 'lucide-react';
-import { mockProjects } from '../data/mockData';
+import { useWeb3 } from '../hooks/useWeb3';
+import { ContractService } from '../services/contractService';
+import { Project } from '../data/mockData';
 
 interface ProjectListProps {
-  onProjectClick: (projectId: string) => void;
+  onProjectClick: (projectAddress: string) => void;
 }
 
 export const ProjectList: React.FC<ProjectListProps> = ({ onProjectClick }) => {
+  const { provider, signer, chainId } = useWeb3();
+  const [projects, setProjects] = React.useState<Project[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchProjects = async () => {
+      if (!provider || !chainId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const contractService = new ContractService(provider, signer, chainId);
+        const approvedProjects = await contractService.getApprovedProjects();
+        
+        // Fetch details for each project
+        const projectDetails = await Promise.all(
+          approvedProjects.map(async (address) => {
+            try {
+              const details = await contractService.getProjectDetails(address);
+              return {
+                id: address, // Use contract address as ID
+                address: address, // Store the actual contract address
+                ...details
+              };
+            } catch (err) {
+              console.error(`Error fetching project details for ${address}:`, err);
+              return null;
+            }
+          })
+        );
+
+        // Filter out failed fetches
+        const validProjects = projectDetails.filter(project => project !== null) as Project[];
+        setProjects(validProjects);
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        setError('Failed to load projects');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [provider, signer, chainId]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading projects...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center">
+          <p className="text-red-600">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center">
+          <p className="text-gray-600">No approved projects found. Connect your wallet to view projects.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="text-center mb-12">
@@ -15,14 +101,14 @@ export const ProjectList: React.FC<ProjectListProps> = ({ onProjectClick }) => {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {mockProjects.map((project) => {
+        {projects.map((project) => {
           const fundingPercentage = (project.currentFunding / project.fundingGoal) * 100;
           
           return (
             <div
-              key={project.id}
+              key={project.address}
               className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-              onClick={() => onProjectClick(project.id)}
+              onClick={() => onProjectClick(project.address)}
             >
               <div className="relative">
                 <img

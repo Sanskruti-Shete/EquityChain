@@ -1,5 +1,6 @@
 export interface Project {
   id: string;
+  address: string; // Add contract address field
   title: string;
   description: string;
   image: string;

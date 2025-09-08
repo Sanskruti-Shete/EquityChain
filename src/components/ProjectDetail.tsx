@@ -2,26 +2,92 @@ import React, { useState } from 'react';
 import { ArrowLeft, Users, Clock, TrendingUp, Shield, Calendar, FileText, DollarSign, MessageCircle } from 'lucide-react';
 import { useWeb3 } from '../hooks/useWeb3';
 import { ContractService } from '../services/contractService';
-import { mockProjects } from '../data/mockData';
+import { Project } from '../data/mockData';
 
 interface ProjectDetailProps {
-  projectId: string;
+  projectAddress: string;
   onBack: () => void;
   isConnected: boolean;
 }
 
-export const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId, onBack, isConnected }) => {
+export const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectAddress, onBack, isConnected }) => {
   const { provider, signer, chainId, account } = useWeb3();
   const [investmentAmount, setInvestmentAmount] = useState('');
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
   const [isInvesting, setIsInvesting] = useState(false);
   const [investmentError, setInvestmentError] = useState<string | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const project = mockProjects.find(p => p.id === projectId);
-  
-  if (!project) {
-    return <div>Project not found</div>;
+  React.useEffect(() => {
+    const fetchProjectDetails = async () => {
+      if (!provider || !chainId || !projectAddress) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const contractService = new ContractService(provider, signer, chainId);
+        const projectDetails = await contractService.getProjectDetails(projectAddress);
+        
+        setProject({
+          id: projectAddress,
+          address: projectAddress,
+          ...projectDetails
+        });
+      } catch (err) {
+        console.error('Error fetching project details:', err);
+        setError('Failed to load project details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjectDetails();
+  }, [provider, signer, chainId, projectAddress]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Projects
+        </button>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading project details...</p>
+        </div>
+      </div>
+    );
   }
+
+  if (error || !project) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Projects
+        </button>
+        <div className="text-center">
+          <p className="text-red-600">{error || 'Project not found'}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
 
   const fundingPercentage = (project.currentFunding / project.fundingGoal) * 100;
   const estimatedEquity = investmentAmount ? (parseFloat(investmentAmount) / project.fundingGoal) * project.equityOffered : 0;
@@ -50,9 +116,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId, onBack,
     try {
       const contractService = new ContractService(provider!, signer!, chainId!);
       
-      // For demo purposes, we'll use the project ID as the contract address
-      // In a real app, you'd fetch the actual contract address from your backend
-      const result = await contractService.investInProject(projectId, investmentAmount);
+      // Use the actual contract address
+      const result = await contractService.investInProject(projectAddress, investmentAmount);
       
       if (result.success) {
         setShowInvestmentModal(false);
