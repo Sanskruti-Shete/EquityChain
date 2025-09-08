@@ -11,6 +11,16 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const { account, isConnected, isConnecting, connectWallet, disconnectWallet, error } = useWeb3();
 
+  const getNetworkName = (chainId: number) => {
+    const networks: { [key: number]: string } = {
+      1: 'Ethereum',
+      11155111: 'Sepolia',
+      137: 'Polygon',
+      31337: 'Localhost'
+    };
+    return networks[chainId] || 'Unknown';
+  };
+
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
@@ -77,7 +87,10 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
             {isConnected ? (
               <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg">
                 <Wallet className="h-4 w-4" />
-                <span className="text-sm font-medium">{formatAddress(account!)}</span>
+                <div className="text-sm">
+                  <div className="font-medium">{formatAddress(account!)}</div>
+                  <div className="text-xs text-green-600">Sepolia Testnet</div>
+                </div>
                 <button
                   onClick={disconnectWallet}
                   className="text-xs text-green-600 hover:text-green-800 ml-2"

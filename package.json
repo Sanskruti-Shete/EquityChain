@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "compile-contracts": "npx hardhat compile",
-    "deploy-local": "npx hardhat run scripts/deploy.js --network localhost"
+    "deploy-local": "npx hardhat run scripts/deploy.js --network localhost",
+    "deploy-sepolia": "npx hardhat run scripts/deploy.js --network sepolia",
+    "verify-sepolia": "npx hardhat verify --network sepolia"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
