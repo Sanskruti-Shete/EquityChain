@@ -25,15 +25,31 @@ export const ProjectList: React.FC<ProjectListProps> = ({ onProjectClick }) => {
         const contractService = new ContractService(provider, signer, chainId);
         const approvedProjects = await contractService.getApprovedProjects();
         
+        // Handle empty array case
+        if (!Array.isArray(approvedProjects) || approvedProjects.length === 0) {
+          setProjects([]);
+          return;
+        }
+        
         // Fetch details for each project
         const projectDetails = await Promise.all(
           approvedProjects.map(async (address) => {
             try {
               const details = await contractService.getProjectDetails(address);
               return {
-                id: address, // Use contract address as ID
-                address: address, // Store the actual contract address
-                ...details
+                id: address,
+                address: address,
+                title: details.title || 'Untitled Project',
+                description: details.description || 'No description available',
+                category: details.category || 'General',
+                image: details.image || 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg',
+                fundingGoal: details.fundingGoal || 0,
+                currentFunding: details.currentFunding || 0,
+                minInvestment: details.minInvestment || 1000,
+                equityOffered: details.equityOffered || 10,
+                investors: details.investors || 0,
+                daysLeft: details.daysLeft || 30,
+                creator: details.creator || address
               };
             } catch (err) {
               console.error(`Error fetching project details for ${address}:`, err);
@@ -47,7 +63,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ onProjectClick }) => {
         setProjects(validProjects);
       } catch (err) {
         console.error('Error fetching projects:', err);
-        setError('Failed to load projects');
+        setError('Failed to load projects. Make sure contracts are deployed and you are connected to the correct network.');
       } finally {
         setLoading(false);
       }

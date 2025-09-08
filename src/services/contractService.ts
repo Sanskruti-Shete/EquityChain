@@ -80,7 +80,8 @@ export class ContractService {
       const factoryAddress = getContractAddress(this.chainId, 'projectFactory');
       const factory = new ethers.Contract(factoryAddress, PROJECT_FACTORY_ABI, this.provider);
 
-      const projectAddresses = await factory.getApprovedProjects();
+      const result = await factory.getApprovedProjects();
+      const projectAddresses = result || [];
       const projects = [];
 
       for (const address of projectAddresses) {
